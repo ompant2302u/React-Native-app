@@ -1,20 +1,16 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+// App.js — start of Day 5
+//
+// Deliberately unstyled. This is the "before" picture.
+// By the end of Day 5 this screen looks like a real app.
+
+import { Text } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import ListScreen from "./src/components/ListScreen";
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <ListScreen />
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
