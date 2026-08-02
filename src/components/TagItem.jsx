@@ -1,15 +1,46 @@
-import { View, Text, StyleSheet } from "react-native";
-import { spacing, colors } from "../constants/theme";
+// src/components/TagItem.jsx
+// Theme-aware tag chips
 
-export const Tags = ({ tags }) => {
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { spacing, fontSize } from "../constants/theme";
+import { useTheme } from "../contexts/ThemeContext";
+
+export const Tags = ({ tags, selectedTags, onTagPress }) => {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.tagContainer}>
       {tags.map((tag) => {
-        return (
-          <View style={styles.tagStyle} key={tag}>
-            <Text style={styles.tagText}>{tag}</Text>
+        const isSelected = selectedTags ? selectedTags.includes(tag) : false;
+        const chip = (
+          <View
+            key={tag}
+            style={[
+              styles.tagStyle,
+              {
+                backgroundColor: isSelected ? colors.primary : colors.tagBg,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.tagText,
+                { color: isSelected ? "#fff" : colors.tagText },
+              ]}
+            >
+              {tag}
+            </Text>
           </View>
         );
+
+        if (onTagPress) {
+          return (
+            <Pressable key={tag} onPress={() => onTagPress(tag)}>
+              {chip}
+            </Pressable>
+          );
+        }
+        return chip;
       })}
     </View>
   );
@@ -24,10 +55,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   tagText: {
-    color: colors.tagText,
+    fontSize: fontSize.xs,
+    fontWeight: "500",
   },
   tagStyle: {
-    backgroundColor: colors.tagBg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: spacing.sm,
