@@ -6,11 +6,14 @@
 import { Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import ListScreen from "./src/components/ListScreen";
+import { ThemeProvider } from "./src/contexts/ThemeContext";
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ListScreen />
+      <ThemeProvider>
+        <ListScreen />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

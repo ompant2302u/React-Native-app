@@ -3,23 +3,38 @@ import {
   StyleSheet,
   View,
   Text,
-  Image,
   useWindowDimensions,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, shadow, spacing, fontSize } from "../constants/theme";
+import { spacing, fontSize } from "../constants/theme";
 import SEED_ITEMS from "../data/seed";
 import { MealCard } from "./MealItem";
+import { useTheme } from "../contexts/ThemeContext";
 
 const ListScreen = () => {
   let numColumns = 1;
   const { width } = useWindowDimensions();
   numColumns = width > 600 ? 2 : 1;
+  const { colors, toggle, mode } = useTheme();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
       <View>
-        <Text style={styles.title}>My Collection</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-around",
+            alignItems: "center",
+          }}
+        >
+          <Text style={styles.title}>My Collection</Text>
+          <Pressable onPress={toggle}>
+            <Text style={{ color: colors.primary, fontSize: fontSize.xl }}>
+              {mode}
+            </Text>
+          </Pressable>
+        </View>
         <FlatList
           key={numColumns} // important for re-rendering when numColumns changes
           data={SEED_ITEMS}
@@ -39,14 +54,7 @@ const ListScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.bg,
     paddingBottom: spacing.xxl,
-  },
-  cardContainer: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: spacing.sm,
-    ...shadow(2),
   },
   columnWrapperStyle: {
     gap: spacing.sm,
