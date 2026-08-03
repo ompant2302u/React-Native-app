@@ -60,7 +60,9 @@ export default function HomeScreen({ navigation }) {
       : width - spacing.md * 2;
 
   const myMealsCount = useMemo(
-    () => meals.filter((meal) => meal.source === "mine").length,
+    () =>
+      meals.filter((meal) => meal.source === "mine")
+        .length,
     [meals]
   );
 
@@ -75,11 +77,11 @@ export default function HomeScreen({ navigation }) {
           pinkSoft: "#3f1726",
           greenSoft: "#12372f",
           orangeSoft: "#422d12",
+          updateIcon: "#513810",
+          deleteIcon: "#581c2b",
           glass: "rgba(255,255,255,0.12)",
           heroText: "rgba(255,255,255,0.76)",
           overlay: "rgba(0,0,0,0.72)",
-          actionBorder: "#334155",
-          dangerBorder: "#7f1d1d",
         }
       : {
           hero: "#172554",
@@ -90,11 +92,11 @@ export default function HomeScreen({ navigation }) {
           pinkSoft: "#fff1f2",
           greenSoft: "#ecfdf5",
           orangeSoft: "#fff7ed",
+          updateIcon: "#ffedd5",
+          deleteIcon: "#ffe4e6",
           glass: "rgba(255,255,255,0.14)",
           heroText: "rgba(255,255,255,0.78)",
           overlay: "rgba(15,23,42,0.55)",
-          actionBorder: "#e2e8f0",
-          dangerBorder: "#fecaca",
         };
 
   function openAddMeal() {
@@ -122,9 +124,11 @@ export default function HomeScreen({ navigation }) {
         meal.cuisine ||
         meal.type ||
         "",
-      minutes: meal.minutes
-        ? String(meal.minutes)
-        : "",
+      minutes:
+        meal.minutes !== undefined &&
+        meal.minutes !== null
+          ? String(meal.minutes)
+          : "",
       image:
         typeof meal.image === "string"
           ? meal.image
@@ -171,6 +175,7 @@ export default function HomeScreen({ navigation }) {
     }
 
     const minutesText = editForm.minutes.trim();
+
     const minutes = minutesText
       ? Number(minutesText)
       : null;
@@ -181,7 +186,7 @@ export default function HomeScreen({ navigation }) {
     ) {
       Alert.alert(
         "Invalid cooking time",
-        "Enter a valid cooking time."
+        "Enter a valid cooking time in minutes."
       );
       return;
     }
@@ -279,32 +284,39 @@ export default function HomeScreen({ navigation }) {
 
   const listHeader = (
     <View>
-      {/* Hero section */}
-
       <View
         style={[
           styles.hero,
-          { backgroundColor: palette.hero },
+          {
+            backgroundColor: palette.hero,
+          },
         ]}
       >
         <View
           style={[
             styles.heroCircleLarge,
-            { backgroundColor: palette.heroAccent },
+            {
+              backgroundColor:
+                palette.heroAccent,
+            },
           ]}
         />
 
         <View
           style={[
             styles.heroCircleSmall,
-            { backgroundColor: palette.glass },
+            {
+              backgroundColor: palette.glass,
+            },
           ]}
         />
 
         <View
           style={[
             styles.heroBadge,
-            { backgroundColor: palette.glass },
+            {
+              backgroundColor: palette.glass,
+            },
           ]}
         >
           <Ionicons
@@ -325,10 +337,12 @@ export default function HomeScreen({ navigation }) {
         <Text
           style={[
             styles.heroDescription,
-            { color: palette.heroText },
+            {
+              color: palette.heroText,
+            },
           ]}
         >
-          Create, organize and manage all your favourite
+          Create, organize and manage your favourite
           recipes in one place.
         </Text>
 
@@ -359,48 +373,6 @@ export default function HomeScreen({ navigation }) {
         </Pressable>
       </View>
 
-      {/* Statistics */}
-
-      <View style={styles.statsRow}>
-        <StatCard
-          icon="restaurant-outline"
-          value={meals.length}
-          label="Recipes"
-          iconColor={colors.primary}
-          iconBackground={palette.blueSoft}
-          backgroundColor={palette.surface}
-          borderColor={colors.border}
-          textColor={colors.text}
-          mutedColor={colors.textMuted}
-        />
-
-        <StatCard
-          icon="heart"
-          value={favourites.length}
-          label="Favourites"
-          iconColor="#f43f5e"
-          iconBackground={palette.pinkSoft}
-          backgroundColor={palette.surface}
-          borderColor={colors.border}
-          textColor={colors.text}
-          mutedColor={colors.textMuted}
-        />
-
-        <StatCard
-          icon="create-outline"
-          value={myMealsCount}
-          label="My recipes"
-          iconColor="#10b981"
-          iconBackground={palette.greenSoft}
-          backgroundColor={palette.surface}
-          borderColor={colors.border}
-          textColor={colors.text}
-          mutedColor={colors.textMuted}
-        />
-      </View>
-
-      {/* Collection title */}
-
       <View style={styles.collectionHeader}>
         <View>
           <Text
@@ -428,23 +400,13 @@ export default function HomeScreen({ navigation }) {
         <View
           style={[
             styles.manageBadge,
-            { backgroundColor: palette.blueSoft },
+            {
+              backgroundColor:
+                palette.blueSoft,
+            },
           ]}
         >
-          <Ionicons
-            name="settings-outline"
-            size={15}
-            color={colors.primary}
-          />
 
-          <Text
-            style={[
-              styles.manageBadgeText,
-              { color: colors.primary },
-            ]}
-          >
-            Manage
-          </Text>
         </View>
       </View>
     </View>
@@ -460,14 +422,11 @@ export default function HomeScreen({ navigation }) {
         },
       ]}
     >
-      {/* Header */}
-
       <View
         style={[
           styles.header,
           {
             backgroundColor: colors.bg,
-            borderBottomColor: colors.border,
           },
         ]}
       >
@@ -498,8 +457,8 @@ export default function HomeScreen({ navigation }) {
           style={({ pressed }) => [
             styles.themeButton,
             {
-              backgroundColor: palette.control,
-              borderColor: colors.border,
+              backgroundColor:
+                palette.control,
             },
             pressed && styles.pressed,
           ]}
@@ -531,7 +490,8 @@ export default function HomeScreen({ navigation }) {
             paddingBottom:
               spacing.xxl + insets.bottom,
           },
-          meals.length === 0 && styles.emptyList,
+          meals.length === 0 &&
+            styles.emptyList,
         ]}
         columnWrapperStyle={
           numberOfColumns > 1
@@ -540,102 +500,88 @@ export default function HomeScreen({ navigation }) {
         }
         renderItem={({ item }) => {
           const isDeleting =
-            String(deletingId) === String(item.id);
+            String(deletingId) ===
+            String(item.id);
 
           return (
             <View
               style={[
-                styles.mealShell,
+                styles.mealCardContainer,
                 {
                   width: cardWidth,
-                  backgroundColor: palette.surface,
-                  borderColor: colors.border,
+                  backgroundColor:
+                    palette.surface,
                 },
               ]}
             >
-              {/* Meal card */}
-
-              <View style={styles.mealCardArea}>
+              <View style={styles.mealContent}>
                 <MealCard
                   item={item}
                   onPress={(selectedMeal) =>
-                    openMeal(selectedMeal || item)
+                    openMeal(
+                      selectedMeal || item
+                    )
                   }
                 />
               </View>
 
-              {/* Attached action footer */}
-
-              <View
-                style={[
-                  styles.mealActionFooter,
-                  {
-                    backgroundColor: palette.surface,
-                    borderTopColor: palette.actionBorder,
-                  },
-                ]}
-              >
+              <View style={styles.actionArea}>
                 <Pressable
-                  onPress={() => openUpdateModal(item)}
+                  onPress={() =>
+                    openUpdateModal(item)
+                  }
                   disabled={isDeleting}
                   accessibilityRole="button"
                   accessibilityLabel="Update recipe"
                   style={({ pressed }) => [
                     styles.actionButton,
-                    styles.updateButton,
                     {
                       backgroundColor:
                         palette.orangeSoft,
                     },
                     pressed && styles.pressed,
-                    isDeleting && styles.disabled,
+                    isDeleting &&
+                      styles.disabled,
                   ]}
                 >
                   <View
                     style={[
-                      styles.actionIconBox,
+                      styles.actionIcon,
                       {
                         backgroundColor:
-                          mode === "dark"
-                            ? "#513810"
-                            : "#ffedd5",
+                          palette.updateIcon,
                       },
                     ]}
                   >
                     <Ionicons
                       name="create-outline"
-                      size={18}
+                      size={19}
                       color="#d97706"
                     />
                   </View>
 
-                  <View style={styles.actionTextArea}>
+                  <View style={styles.actionText}>
                     <Text
-                      style={styles.updateButtonText}
+                      style={
+                        styles.updateTitle
+                      }
                     >
                       Update
                     </Text>
 
                     <Text
                       style={[
-                        styles.actionDescription,
-                        { color: colors.textMuted },
+                        styles.actionSubtitle,
+                        {
+                          color:
+                            colors.textMuted,
+                        },
                       ]}
                     >
-                      Edit recipe
+                      Edit this recipe
                     </Text>
                   </View>
                 </Pressable>
-
-                <View
-                  style={[
-                    styles.actionDivider,
-                    {
-                      backgroundColor:
-                        palette.actionBorder,
-                    },
-                  ]}
-                />
 
                 <Pressable
                   onPress={() =>
@@ -646,23 +592,21 @@ export default function HomeScreen({ navigation }) {
                   accessibilityLabel="Delete recipe"
                   style={({ pressed }) => [
                     styles.actionButton,
-                    styles.deleteButton,
                     {
                       backgroundColor:
                         palette.pinkSoft,
                     },
                     pressed && styles.pressed,
-                    isDeleting && styles.disabled,
+                    isDeleting &&
+                      styles.disabled,
                   ]}
                 >
                   <View
                     style={[
-                      styles.actionIconBox,
+                      styles.actionIcon,
                       {
                         backgroundColor:
-                          mode === "dark"
-                            ? "#581c2b"
-                            : "#ffe4e6",
+                          palette.deleteIcon,
                       },
                     ]}
                   >
@@ -672,14 +616,16 @@ export default function HomeScreen({ navigation }) {
                           ? "hourglass-outline"
                           : "trash-outline"
                       }
-                      size={18}
+                      size={19}
                       color="#ef4444"
                     />
                   </View>
 
-                  <View style={styles.actionTextArea}>
+                  <View style={styles.actionText}>
                     <Text
-                      style={styles.deleteButtonText}
+                      style={
+                        styles.deleteTitle
+                      }
                     >
                       {isDeleting
                         ? "Deleting"
@@ -688,11 +634,14 @@ export default function HomeScreen({ navigation }) {
 
                     <Text
                       style={[
-                        styles.actionDescription,
-                        { color: colors.textMuted },
+                        styles.actionSubtitle,
+                        {
+                          color:
+                            colors.textMuted,
+                        },
                       ]}
                     >
-                      Remove recipe
+                      Remove this recipe
                     </Text>
                   </View>
                 </Pressable>
@@ -709,8 +658,6 @@ export default function HomeScreen({ navigation }) {
         }
       />
 
-      {/* Update modal */}
-
       <Modal
         visible={Boolean(editingMeal)}
         transparent
@@ -721,7 +668,10 @@ export default function HomeScreen({ navigation }) {
         <KeyboardAvoidingView
           style={[
             styles.modalOverlay,
-            { backgroundColor: palette.overlay },
+            {
+              backgroundColor:
+                palette.overlay,
+            },
           ]}
           behavior={
             Platform.OS === "ios"
@@ -732,15 +682,13 @@ export default function HomeScreen({ navigation }) {
           <View
             style={[
               styles.modalContainer,
-              { backgroundColor: colors.surface },
+              {
+                backgroundColor:
+                  colors.surface,
+              },
             ]}
           >
-            <View
-              style={[
-                styles.modalHeader,
-                { borderBottomColor: colors.border },
-              ]}
-            >
+            <View style={styles.modalHeader}>
               <View style={styles.modalHeaderText}>
                 <Text
                   style={[
@@ -754,7 +702,10 @@ export default function HomeScreen({ navigation }) {
                 <Text
                   style={[
                     styles.modalSubtitle,
-                    { color: colors.textMuted },
+                    {
+                      color:
+                        colors.textMuted,
+                    },
                   ]}
                 >
                   Edit the selected recipe
@@ -794,7 +745,10 @@ export default function HomeScreen({ navigation }) {
                 placeholder="Enter recipe title"
                 colors={colors}
                 onChangeText={(value) =>
-                  updateField("title", value)
+                  updateField(
+                    "title",
+                    value
+                  )
                 }
               />
 
@@ -805,7 +759,10 @@ export default function HomeScreen({ navigation }) {
                 placeholder="Short recipe subtitle"
                 colors={colors}
                 onChangeText={(value) =>
-                  updateField("subtitle", value)
+                  updateField(
+                    "subtitle",
+                    value
+                  )
                 }
               />
 
@@ -816,7 +773,10 @@ export default function HomeScreen({ navigation }) {
                 placeholder="Breakfast, lunch..."
                 colors={colors}
                 onChangeText={(value) =>
-                  updateField("category", value)
+                  updateField(
+                    "category",
+                    value
+                  )
                 }
               />
 
@@ -828,7 +788,10 @@ export default function HomeScreen({ navigation }) {
                 keyboardType="numeric"
                 colors={colors}
                 onChangeText={(value) =>
-                  updateField("minutes", value)
+                  updateField(
+                    "minutes",
+                    value
+                  )
                 }
               />
 
@@ -840,7 +803,10 @@ export default function HomeScreen({ navigation }) {
                 autoCapitalize="none"
                 colors={colors}
                 onChangeText={(value) =>
-                  updateField("image", value)
+                  updateField(
+                    "image",
+                    value
+                  )
                 }
               />
 
@@ -851,7 +817,10 @@ export default function HomeScreen({ navigation }) {
                 placeholder="Dinner, Easy, Healthy"
                 colors={colors}
                 onChangeText={(value) =>
-                  updateField("tags", value)
+                  updateField(
+                    "tags",
+                    value
+                  )
                 }
               />
 
@@ -863,22 +832,20 @@ export default function HomeScreen({ navigation }) {
                 multiline
                 colors={colors}
                 onChangeText={(value) =>
-                  updateField("notes", value)
+                  updateField(
+                    "notes",
+                    value
+                  )
                 }
               />
             </ScrollView>
 
-            <View
-              style={[
-                styles.modalFooter,
-                { borderTopColor: colors.border },
-              ]}
-            >
+            <View style={styles.modalFooter}>
               <Pressable
                 onPress={closeUpdateModal}
                 disabled={saving}
                 style={({ pressed }) => [
-                  styles.cancelModalButton,
+                  styles.cancelButton,
                   {
                     backgroundColor:
                       palette.control,
@@ -888,7 +855,7 @@ export default function HomeScreen({ navigation }) {
               >
                 <Text
                   style={[
-                    styles.cancelModalText,
+                    styles.cancelButtonText,
                     { color: colors.text },
                   ]}
                 >
@@ -900,7 +867,7 @@ export default function HomeScreen({ navigation }) {
                 onPress={saveUpdatedMeal}
                 disabled={saving}
                 style={({ pressed }) => [
-                  styles.saveModalButton,
+                  styles.saveButton,
                   {
                     backgroundColor:
                       colors.primary,
@@ -919,7 +886,7 @@ export default function HomeScreen({ navigation }) {
                   color="#ffffff"
                 />
 
-                <Text style={styles.saveModalText}>
+                <Text style={styles.saveButtonText}>
                   {saving
                     ? "Saving..."
                     : "Save Changes"}
@@ -940,7 +907,6 @@ function StatCard({
   iconColor,
   iconBackground,
   backgroundColor,
-  borderColor,
   textColor,
   mutedColor,
 }) {
@@ -948,10 +914,7 @@ function StatCard({
     <View
       style={[
         styles.statCard,
-        {
-          backgroundColor,
-          borderColor,
-        },
+        { backgroundColor },
       ]}
     >
       <View
@@ -1016,7 +979,6 @@ function FormField({
           styles.inputContainer,
           {
             backgroundColor: colors.bg,
-            borderColor: colors.border,
           },
           multiline &&
             styles.multilineContainer,
@@ -1037,7 +999,9 @@ function FormField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.textFaint}
+          placeholderTextColor={
+            colors.textFaint
+          }
           selectionColor={colors.primary}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
@@ -1049,7 +1013,8 @@ function FormField({
           style={[
             styles.input,
             { color: colors.text },
-            multiline && styles.multilineInput,
+            multiline &&
+              styles.multilineInput,
           ]}
         />
       </View>
@@ -1100,7 +1065,9 @@ function EmptyState({
         onPress={onAdd}
         style={({ pressed }) => [
           styles.emptyButton,
-          { backgroundColor: colors.primary },
+          {
+            backgroundColor: colors.primary,
+          },
           pressed && styles.pressed,
         ]}
       >
@@ -1127,7 +1094,6 @@ const styles = StyleSheet.create({
     minHeight: 72,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1152,7 +1118,6 @@ const styles = StyleSheet.create({
   themeButton: {
     width: 42,
     height: 42,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
@@ -1266,10 +1231,17 @@ const styles = StyleSheet.create({
     minHeight: 118,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xs,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
     elevation: 2,
   },
 
@@ -1328,10 +1300,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
 
-  mealShell: {
+  mealCardContainer: {
     marginBottom: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 23,
+    borderRadius: 24,
     overflow: "hidden",
 
     shadowColor: "#000000",
@@ -1339,71 +1310,59 @@ const styles = StyleSheet.create({
       width: 0,
       height: 5,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.11,
     shadowRadius: 12,
     elevation: 4,
   },
 
-  mealCardArea: {
+  mealContent: {
     overflow: "hidden",
   },
 
-  mealActionFooter: {
-    minHeight: 72,
-    padding: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  actionArea: {
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
     flexDirection: "row",
     alignItems: "stretch",
+    gap: spacing.sm,
   },
 
   actionButton: {
     flex: 1,
-    minHeight: 56,
+    minHeight: 62,
     paddingHorizontal: spacing.sm,
-    borderRadius: 15,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
 
-  updateButton: {
-    marginRight: spacing.xs,
-  },
-
-  deleteButton: {
-    marginLeft: spacing.xs,
-  },
-
-  actionDivider: {
-    width: StyleSheet.hairlineWidth,
-    marginVertical: spacing.xs,
-  },
-
-  actionIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+  actionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  actionTextArea: {
+  actionText: {
     flex: 1,
   },
 
-  updateButtonText: {
+  updateTitle: {
     color: "#d97706",
     fontSize: 13,
     fontWeight: "800",
   },
 
-  deleteButtonText: {
+  deleteTitle: {
     color: "#ef4444",
     fontSize: 13,
     fontWeight: "800",
   },
 
-  actionDescription: {
+  actionSubtitle: {
     marginTop: 2,
     fontSize: 10,
   },
@@ -1471,7 +1430,6 @@ const styles = StyleSheet.create({
     minHeight: 76,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1517,7 +1475,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     minHeight: 52,
     paddingHorizontal: spacing.md,
-    borderWidth: 1,
     borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -1548,12 +1505,11 @@ const styles = StyleSheet.create({
 
   modalFooter: {
     padding: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: spacing.sm,
   },
 
-  cancelModalButton: {
+  cancelButton: {
     flex: 1,
     minHeight: 50,
     borderRadius: 15,
@@ -1561,12 +1517,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  cancelModalText: {
+  cancelButtonText: {
     fontSize: fontSize.sm,
     fontWeight: "700",
   },
 
-  saveModalButton: {
+  saveButton: {
     flex: 1.5,
     minHeight: 50,
     borderRadius: 15,
@@ -1576,7 +1532,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
 
-  saveModalText: {
+  saveButtonText: {
     color: "#ffffff",
     fontSize: fontSize.sm,
     fontWeight: "800",
@@ -1590,4 +1546,4 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
-});
+}); 

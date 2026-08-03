@@ -2,13 +2,16 @@
 
 import {
   FlatList,
+  Pressable,
   StyleSheet,
-  View,
   Text,
   useWindowDimensions,
+  View,
 } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+
 import { MealCard } from "../components/MealItem";
 import { useTheme } from "../contexts/ThemeContext";
 import { useCollection } from "../contexts/CollectionContext";
@@ -16,88 +19,272 @@ import { spacing, fontSize } from "../constants/theme";
 
 export default function FavouritesScreen({ navigation }) {
   const { width } = useWindowDimensions();
-  const numColumns = width > 600 ? 2 : 1;
-  const { colors } = useTheme();
-  const { favourites } = useCollection();
   const insets = useSafeAreaInsets();
 
-  return (
-    <View style={[styles.root, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+  const { colors, mode, toggle } = useTheme();
+  const { favourites = [] } = useCollection();
 
-      {/* ── Header ──────────────────────────────────────────── */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Favourites</Text>
-        {favourites.length > 0 && (
-          <View style={[styles.badge, { backgroundColor: colors.favourite }]}>
-            <Text style={styles.badgeText}>{favourites.length}</Text>
-          </View>
-        )}
+  const numberOfColumns = width >= 700 ? 2 : 1;
+
+  const cardWidth =
+    numberOfColumns === 2
+      ? (width - spacing.md * 3) / 2
+      : width - spacing.md * 2;
+
+  const controlBackground =
+    mode === "dark" ? "#1f2937" : "#f1f5f9";
+
+  const emptyBackground =
+    mode === "dark" ? "#3f1726" : "#fff1f2";
+
+  function openMeal(meal) {
+    navigation.navigate("MealDetail", {
+      id: meal.id,
+    });
+  }
+
+  return (
+    <View
+      style={[
+        styles.root,
+        {
+          backgroundColor: colors.bg,
+          paddingTop: insets.top,
+        },
+      ]}
+    >
+      {/* Saved recipes heading */}
+
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text
+            style={[
+              styles.title,
+              { color: colors.text },
+            ]}
+          >
+            Saved recipes
+          </Text>
+
+          <Text
+            style={[
+              styles.subtitle,
+              { color: colors.textMuted },
+            ]}
+          >
+            {favourites.length}{" "}
+            {favourites.length === 1
+              ? "favourite recipe"
+              : "favourite recipes"}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={toggle}
+          accessibilityRole="button"
+          accessibilityLabel="Toggle dark mode"
+          style={({ pressed }) => [
+            styles.themeButton,
+            {
+              backgroundColor:
+                controlBackground,
+            },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons
+            name={
+              mode === "dark"
+                ? "sunny-outline"
+                : "moon-outline"
+            }
+            size={21}
+            color={colors.primary}
+          />
+        </Pressable>
       </View>
 
-      {/* ── List ────────────────────────────────────────────── */}
+      {/* Favourite recipes */}
+
       <FlatList
-        key={numColumns}
+        key={numberOfColumns}
         data={favourites}
-        keyExtractor={(item) => item.id}
-        numColumns={numColumns}
+        numColumns={numberOfColumns}
+        keyExtractor={(item, index) =>
+          String(item.id ?? index)
+        }
         renderItem={({ item }) => (
-          <MealCard
-            item={item}
-            onPress={(meal) => navigation.navigate("MealDetail", { id: meal.id })}
-          />
+          <View
+            style={[
+              styles.mealWrapper,
+              { width: cardWidth },
+            ]}
+          >
+            <MealCard
+              item={item}
+              onPress={(selectedMeal) =>
+                openMeal(selectedMeal || item)
+              }
+            />
+          </View>
         )}
         contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: spacing.xxl + insets.bottom },
+          styles.listContent,
+          {
+            paddingBottom:
+              spacing.xxl + insets.bottom,
+          },
+          favourites.length === 0 &&
+            styles.emptyListContent,
         ]}
-        columnWrapperStyle={numColumns > 1 ? styles.columnWrapperStyle : undefined}
+        columnWrapperStyle={
+          numberOfColumns > 1
+            ? styles.columnWrapper
+            : undefined
+        }
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="heart-outline" size={64} color={colors.textFaint} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No favourites yet</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              Tap the ❤️ on any meal card to save it here
-            </Text>
-          </View>
+          <EmptyState
+            colors={colors}
+            backgroundColor={emptyBackground}
+          />
         }
       />
     </View>
   );
 }
 
+function EmptyState({
+  colors,
+  backgroundColor,
+}) {
+  return (
+    <View style={styles.emptyContainer}>
+      <View
+        style={[
+          styles.emptyIconContainer,
+          { backgroundColor },
+        ]}
+      >
+        <Ionicons
+          name="heart-outline"
+          size={43}
+          color="#e11d48"
+        />
+      </View>
+
+      <Text
+        style={[
+          styles.emptyTitle,
+          { color: colors.text },
+        ]}
+      >
+        No saved recipes
+      </Text>
+
+      <Text
+        style={[
+          styles.emptySubtitle,
+          { color: colors.textMuted },
+        ]}
+      >
+        Open a recipe and press the Save to
+        favourites button. Your saved recipes will
+        appear here automatically.
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: {
+    flex: 1,
+  },
+
   header: {
+    minHeight: 78,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    gap: spacing.sm,
+    justifyContent: "space-between",
   },
-  title: { fontSize: fontSize.xl, fontWeight: "bold" },
-  badge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
+
+  headerText: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+
+  title: {
+    fontSize: 25,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+
+  subtitle: {
+    marginTop: 4,
+    fontSize: fontSize.sm,
+  },
+
+  themeButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: "center",
-    paddingHorizontal: 6,
+    justifyContent: "center",
   },
-  badgeText: { color: "#fff", fontSize: fontSize.xs, fontWeight: "700" },
-  contentContainer: {
-    gap: spacing.md,
+
+  listContent: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
   },
-  columnWrapperStyle: { gap: spacing.md },
-  emptyContainer: {
-    alignItems: "center",
-    paddingTop: 80,
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
+
+  emptyListContent: {
+    flexGrow: 1,
   },
-  emptyTitle: { fontSize: fontSize.lg, fontWeight: "600", marginTop: spacing.sm },
-  emptySubtitle: { fontSize: fontSize.md, textAlign: "center", lineHeight: fontSize.md * 1.5 },
+
+  columnWrapper: {
+    gap: spacing.md,
+  },
+
+  mealWrapper: {
+    marginBottom: spacing.md,
+  },
+
+  emptyContainer: {
+    flex: 1,
+    minHeight: 430,
+    paddingHorizontal: spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  emptyIconContainer: {
+    width: 94,
+    height: 94,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  emptyTitle: {
+    marginTop: spacing.lg,
+    fontSize: fontSize.lg,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  emptySubtitle: {
+    maxWidth: 330,
+    marginTop: spacing.sm,
+    fontSize: fontSize.sm,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+
+  pressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.96 }],
+  },
 });
