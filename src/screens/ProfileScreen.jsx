@@ -8,7 +8,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -43,9 +42,14 @@ export default function ProfileScreen() {
   };
 
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(currentProfile);
   const [pickingImage, setPickingImage] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+
+  const [draft, setDraft] = useState({
+    name: currentProfile.name,
+    bio: currentProfile.bio,
+    avatar: currentProfile.avatar,
+  });
 
   const displayedProfile = editing
     ? draft
@@ -59,6 +63,35 @@ export default function ProfileScreen() {
     [meals]
   );
 
+  const profileCompletion = useMemo(() => {
+    const fields = [
+      currentProfile.name.trim(),
+      currentProfile.bio.trim(),
+      currentProfile.avatar.trim(),
+    ];
+
+    const completedFields =
+      fields.filter(Boolean).length;
+
+    return Math.round(
+      (completedFields / fields.length) * 100
+    );
+  }, [
+    currentProfile.name,
+    currentProfile.bio,
+    currentProfile.avatar,
+  ]);
+
+  const favouritePercentage = useMemo(() => {
+    if (meals.length === 0) {
+      return 0;
+    }
+
+    return Math.round(
+      (favourites.length / meals.length) * 100
+    );
+  }, [favourites.length, meals.length]);
+
   const initials = getInitials(
     displayedProfile.name
   );
@@ -67,43 +100,33 @@ export default function ProfileScreen() {
     Boolean(displayedProfile.avatar?.trim()) &&
     !imageFailed;
 
-  const completion = useMemo(() => {
-    const completedFields = [
-      currentProfile.name.trim(),
-      currentProfile.bio.trim(),
-      currentProfile.avatar.trim(),
-    ].filter(Boolean).length;
-
-    return Math.round(
-      (completedFields / 3) * 100
-    );
-  }, [
-    currentProfile.name,
-    currentProfile.bio,
-    currentProfile.avatar,
-  ]);
-
-  const ui =
+  const palette =
     mode === "dark"
       ? {
-          hero: "#111827",
-          heroAccent: "#1d4ed8",
-          glass: "rgba(255,255,255,0.12)",
-          softBlue: "#172554",
-          softPink: "#3f1726",
-          softGreen: "#12372f",
-          softOrange: "#422d12",
+          control: "#1f2937",
+          profileCover: "#172033",
+          avatarBackground: "#1d4ed8",
+          blueSoft: "#172554",
+          pinkSoft: "#3f1726",
+          greenSoft: "#12372f",
+          orangeSoft: "#422d12",
+          purpleSoft: "#2e1f4f",
           progressTrack: "#273449",
+          completed: "#10b981",
+          locked: "#64748b",
         }
       : {
-          hero: "#172554",
-          heroAccent: "#2563eb",
-          glass: "rgba(255,255,255,0.14)",
-          softBlue: "#eff6ff",
-          softPink: "#fff1f2",
-          softGreen: "#ecfdf5",
-          softOrange: "#fff7ed",
+          control: "#f1f5f9",
+          profileCover: "#f8fafc",
+          avatarBackground: "#2563eb",
+          blueSoft: "#eff6ff",
+          pinkSoft: "#fff1f2",
+          greenSoft: "#ecfdf5",
+          orangeSoft: "#fff7ed",
+          purpleSoft: "#f5f3ff",
           progressTrack: "#e2e8f0",
+          completed: "#10b981",
+          locked: "#94a3b8",
         };
 
   function startEditing() {
@@ -136,6 +159,7 @@ export default function ProfileScreen() {
         "Name required",
         "Please enter your name."
       );
+
       return;
     }
 
@@ -156,6 +180,18 @@ export default function ProfileScreen() {
 
     try {
       setPickingImage(true);
+
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert(
+          "Photo permission required",
+          "Allow access to your photos to choose a profile picture."
+        );
+
+        return;
+      }
 
       const result =
         await ImagePicker.launchImageLibraryAsync({
@@ -179,14 +215,15 @@ export default function ProfileScreen() {
           "Image error",
           "The selected image could not be loaded."
         );
+
         return;
       }
 
       setImageFailed(false);
 
       if (editing) {
-        setDraft((previous) => ({
-          ...previous,
+        setDraft((current) => ({
+          ...current,
           avatar: selectedUri,
         }));
       } else {
@@ -215,17 +252,19 @@ export default function ProfileScreen() {
     setImageFailed(false);
 
     if (editing) {
-      setDraft((previous) => ({
-        ...previous,
+      setDraft((current) => ({
+        ...current,
         avatar: "",
       }));
-    } else {
-      updateProfile({
-        name: currentProfile.name,
-        bio: currentProfile.bio,
-        avatar: "",
-      });
+
+      return;
     }
+
+    updateProfile({
+      name: currentProfile.name,
+      bio: currentProfile.bio,
+      avatar: "",
+    });
   }
 
   return (
@@ -253,7 +292,6 @@ export default function ProfileScreen() {
             styles.header,
             {
               backgroundColor: colors.bg,
-              borderBottomColor: colors.border,
             },
           ]}
         >
@@ -273,80 +311,33 @@ export default function ProfileScreen() {
                 { color: colors.textMuted },
               ]}
             >
-              Manage your personal information
+              Your account and collection activity
             </Text>
           </View>
 
-          {!editing ? (
-            <Pressable
-              onPress={startEditing}
-              style={({ pressed }) => [
-                styles.editButton,
-                {
-                  backgroundColor: ui.softBlue,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name="pencil-outline"
-                size={17}
-                color={colors.primary}
-              />
-
-              <Text
-                style={[
-                  styles.editButtonText,
-                  { color: colors.primary },
-                ]}
-              >
-                Edit
-              </Text>
-            </Pressable>
-          ) : (
-            <View style={styles.headerActions}>
-              <Pressable
-                onPress={cancelEditing}
-                style={({ pressed }) => [
-                  styles.cancelButton,
-                  {
-                    backgroundColor:
-                      colors.surface,
-                    borderColor: colors.border,
-                  },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons
-                  name="close"
-                  size={21}
-                  color={colors.textMuted}
-                />
-              </Pressable>
-
-              <Pressable
-                onPress={saveProfile}
-                style={({ pressed }) => [
-                  styles.saveButton,
-                  {
-                    backgroundColor:
-                      colors.primary,
-                  },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons
-                  name="checkmark"
-                  size={18}
-                  color="#ffffff"
-                />
-
-                <Text style={styles.saveButtonText}>
-                  Save
-                </Text>
-              </Pressable>
-            </View>
-          )}
+          <Pressable
+            onPress={toggle}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle dark mode"
+            style={({ pressed }) => [
+              styles.themeButton,
+              {
+                backgroundColor:
+                  palette.control,
+              },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name={
+                mode === "dark"
+                  ? "sunny-outline"
+                  : "moon-outline"
+              }
+              size={21}
+              color={colors.primary}
+            />
+          </Pressable>
         </View>
 
         <ScrollView
@@ -361,300 +352,374 @@ export default function ProfileScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Profile hero */}
+          {/* Profile card */}
 
           <View
             style={[
-              styles.heroCard,
+              styles.profileCard,
               {
-                backgroundColor: ui.hero,
+                backgroundColor: colors.surface,
                 ...shadow(1),
               },
             ]}
           >
             <View
               style={[
-                styles.heroCircleLarge,
+                styles.profileCover,
                 {
                   backgroundColor:
-                    ui.heroAccent,
+                    palette.profileCover,
                 },
-              ]}
-            />
-
-            <View
-              style={[
-                styles.heroCircleSmall,
-                {
-                  backgroundColor: ui.glass,
-                },
-              ]}
-            />
-
-            <View style={styles.heroBadges}>
-              <View
-                style={[
-                  styles.heroBadge,
-                  {
-                    backgroundColor: ui.glass,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="sparkles-outline"
-                  size={14}
-                  color="#ffffff"
-                />
-
-                <Text style={styles.heroBadgeText}>
-                  Meal collector
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.heroBadge,
-                  {
-                    backgroundColor: ui.glass,
-                  },
-                ]}
-              >
-                <View style={styles.activeDot} />
-
-                <Text style={styles.heroBadgeText}>
-                  Active
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={selectProfileImage}
-              disabled={pickingImage}
-              style={({ pressed }) => [
-                styles.avatarButton,
-                pressed && styles.avatarPressed,
               ]}
             >
-              <View style={styles.avatarBorder}>
-                {hasAvatar ? (
-                  <Image
-                    source={{
-                      uri: displayedProfile.avatar,
-                    }}
-                    style={styles.avatar}
-                    resizeMode="cover"
-                    onError={() =>
-                      setImageFailed(true)
-                    }
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.avatar,
-                      styles.avatarFallback,
-                      {
-                        backgroundColor:
-                          colors.primary,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={styles.avatarInitials}
-                    >
-                      {initials}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
               <View
                 style={[
-                  styles.cameraButton,
+                  styles.coverCircleLarge,
                   {
                     backgroundColor:
-                      colors.primary,
+                      palette.blueSoft,
                   },
                 ]}
-              >
-                <Ionicons
-                  name={
-                    pickingImage
-                      ? "hourglass-outline"
-                      : "camera-outline"
-                  }
-                  size={18}
-                  color="#ffffff"
-                />
-              </View>
-            </Pressable>
-
-            <Text
-              style={styles.profileName}
-              numberOfLines={1}
-            >
-              {displayedProfile.name ||
-                "Your name"}
-            </Text>
-
-            <Text
-              style={styles.profileBio}
-              numberOfLines={3}
-            >
-              {displayedProfile.bio?.trim() ||
-                "Add a short bio to tell others about yourself."}
-            </Text>
-
-            <Pressable
-              onPress={selectProfileImage}
-              disabled={pickingImage}
-              style={({ pressed }) => [
-                styles.choosePhotoButton,
-                {
-                  backgroundColor: ui.glass,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name="images-outline"
-                size={18}
-                color="#ffffff"
               />
 
-              <Text style={styles.choosePhotoText}>
-                {pickingImage
-                  ? "Opening gallery..."
-                  : "Choose profile photo"}
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Edit form */}
-
-          {editing && (
-            <View
-              style={[
-                styles.editCard,
-                {
-                  backgroundColor:
-                    colors.surface,
-                  borderColor: colors.border,
-                  ...shadow(1),
-                },
-              ]}
-            >
-              <SectionHeading
-                icon="person-outline"
-                title="Personal details"
-                subtitle="Update your profile information"
-                colors={colors}
-                compact
-              />
-
-              <ProfileField
-                label="Name"
-                icon="person-outline"
-                value={draft.name}
-                placeholder="Enter your name"
-                maxLength={60}
-                colors={colors}
-                onChangeText={(value) =>
-                  setDraft((previous) => ({
-                    ...previous,
-                    name: value,
-                  }))
-                }
-              />
-
-              <ProfileField
-                label="Bio"
-                icon="document-text-outline"
-                value={draft.bio}
-                placeholder="Write something about yourself"
-                maxLength={180}
-                multiline
-                colors={colors}
-                onChangeText={(value) =>
-                  setDraft((previous) => ({
-                    ...previous,
-                    bio: value,
-                  }))
-                }
-              />
-
-              <Text
+              <View
                 style={[
-                  styles.characterCount,
-                  { color: colors.textFaint },
+                  styles.coverCircleSmall,
+                  {
+                    backgroundColor:
+                      palette.greenSoft,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.profileContent}>
+              <Pressable
+                onPress={selectProfileImage}
+                disabled={pickingImage}
+                style={({ pressed }) => [
+                  styles.avatarPressable,
+                  pressed && styles.avatarPressed,
                 ]}
               >
-                {draft.bio.length}/180
-              </Text>
-
-              <View style={styles.imageActions}>
-                <Pressable
-                  onPress={selectProfileImage}
-                  disabled={pickingImage}
-                  style={({ pressed }) => [
-                    styles.selectImageButton,
+                <View
+                  style={[
+                    styles.avatarOuter,
                     {
                       backgroundColor:
-                        ui.softBlue,
+                        colors.surface,
                     },
-                    pressed && styles.pressed,
+                  ]}
+                >
+                  {hasAvatar ? (
+                    <Image
+                      source={{
+                        uri: displayedProfile.avatar,
+                      }}
+                      style={styles.avatar}
+                      resizeMode="cover"
+                      onError={() =>
+                        setImageFailed(true)
+                      }
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.avatar,
+                        styles.avatarFallback,
+                        {
+                          backgroundColor:
+                            palette.avatarBackground,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={styles.avatarInitials}
+                      >
+                        {initials}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View
+                  style={[
+                    styles.cameraButton,
+                    {
+                      backgroundColor:
+                        colors.primary,
+                    },
                   ]}
                 >
                   <Ionicons
-                    name="images-outline"
-                    size={19}
-                    color={colors.primary}
+                    name={
+                      pickingImage
+                        ? "hourglass-outline"
+                        : "camera-outline"
+                    }
+                    size={17}
+                    color="#ffffff"
+                  />
+                </View>
+              </Pressable>
+
+              {!editing ? (
+                <>
+                  <Text
+                    style={[
+                      styles.profileName,
+                      { color: colors.text },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {currentProfile.name ||
+                      "Your name"}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.profileBio,
+                      {
+                        color:
+                          colors.textMuted,
+                      },
+                    ]}
+                  >
+                    {currentProfile.bio?.trim() ||
+                      "Add a short bio to introduce yourself."}
+                  </Text>
+
+                  <View style={styles.profileActions}>
+                    <Pressable
+                      onPress={startEditing}
+                      style={({ pressed }) => [
+                        styles.editProfileButton,
+                        {
+                          backgroundColor:
+                            colors.primary,
+                        },
+                        pressed &&
+                          styles.pressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name="pencil-outline"
+                        size={18}
+                        color="#ffffff"
+                      />
+
+                      <Text
+                        style={
+                          styles.editProfileText
+                        }
+                      >
+                        Edit profile
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={selectProfileImage}
+                      disabled={pickingImage}
+                      style={({ pressed }) => [
+                        styles.changePhotoButton,
+                        {
+                          backgroundColor:
+                            palette.blueSoft,
+                        },
+                        pressed &&
+                          styles.pressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name="image-outline"
+                        size={18}
+                        color={colors.primary}
+                      />
+
+                      <Text
+                        style={[
+                          styles.changePhotoText,
+                          {
+                            color:
+                              colors.primary,
+                          },
+                        ]}
+                      >
+                        Change photo
+                      </Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.editForm}>
+                  <ProfileField
+                    label="Display name"
+                    icon="person-outline"
+                    value={draft.name}
+                    placeholder="Enter your name"
+                    maxLength={60}
+                    colors={colors}
+                    onChangeText={(value) =>
+                      setDraft((current) => ({
+                        ...current,
+                        name: value,
+                      }))
+                    }
+                  />
+
+                  <ProfileField
+                    label="Bio"
+                    icon="document-text-outline"
+                    value={draft.bio}
+                    placeholder="Write something about yourself"
+                    maxLength={180}
+                    multiline
+                    colors={colors}
+                    onChangeText={(value) =>
+                      setDraft((current) => ({
+                        ...current,
+                        bio: value,
+                      }))
+                    }
                   />
 
                   <Text
                     style={[
-                      styles.selectImageText,
-                      { color: colors.primary },
-                    ]}
-                  >
-                    Select from device
-                  </Text>
-                </Pressable>
-
-                {Boolean(draft.avatar) && (
-                  <Pressable
-                    onPress={removeProfileImage}
-                    style={({ pressed }) => [
-                      styles.removeImageButton,
+                      styles.characterCount,
                       {
-                        backgroundColor:
-                          ui.softPink,
+                        color:
+                          colors.textFaint,
                       },
-                      pressed && styles.pressed,
                     ]}
                   >
-                    <Ionicons
-                      name="trash-outline"
-                      size={18}
-                      color="#ef4444"
-                    />
+                    {draft.bio.length}/180
+                  </Text>
 
-                    <Text
-                      style={styles.removeImageText}
+                  <View style={styles.photoActions}>
+                    <Pressable
+                      onPress={selectProfileImage}
+                      disabled={pickingImage}
+                      style={({ pressed }) => [
+                        styles.selectPhotoButton,
+                        {
+                          backgroundColor:
+                            palette.blueSoft,
+                        },
+                        pressed &&
+                          styles.pressed,
+                      ]}
                     >
-                      Remove
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
+                      <Ionicons
+                        name="images-outline"
+                        size={18}
+                        color={colors.primary}
+                      />
+
+                      <Text
+                        style={[
+                          styles.selectPhotoText,
+                          {
+                            color:
+                              colors.primary,
+                          },
+                        ]}
+                      >
+                        Select photo
+                      </Text>
+                    </Pressable>
+
+                    {Boolean(draft.avatar) && (
+                      <Pressable
+                        onPress={
+                          removeProfileImage
+                        }
+                        style={({ pressed }) => [
+                          styles.removePhotoButton,
+                          {
+                            backgroundColor:
+                              palette.pinkSoft,
+                          },
+                          pressed &&
+                            styles.pressed,
+                        ]}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={18}
+                          color="#ef4444"
+                        />
+
+                        <Text
+                          style={
+                            styles.removePhotoText
+                          }
+                        >
+                          Remove
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+
+                  <View style={styles.formActions}>
+                    <Pressable
+                      onPress={cancelEditing}
+                      style={({ pressed }) => [
+                        styles.cancelButton,
+                        {
+                          backgroundColor:
+                            palette.control,
+                        },
+                        pressed &&
+                          styles.pressed,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.cancelButtonText,
+                          { color: colors.text },
+                        ]}
+                      >
+                        Cancel
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={saveProfile}
+                      style={({ pressed }) => [
+                        styles.saveButton,
+                        {
+                          backgroundColor:
+                            colors.primary,
+                        },
+                        pressed &&
+                          styles.pressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name="checkmark"
+                        size={19}
+                        color="#ffffff"
+                      />
+
+                      <Text
+                        style={
+                          styles.saveButtonText
+                        }
+                      >
+                        Save changes
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
-          )}
+          </View>
 
-          {/* Statistics */}
+          {/* Collection overview */}
 
-          <SectionHeading
-            icon="analytics-outline"
-            title="Collection overview"
-            subtitle="Your meal activity"
+          <SectionHeader
+            title="Your activity"
+            subtitle="Overview of your recipe collection"
             colors={colors}
           />
 
@@ -662,9 +727,9 @@ export default function ProfileScreen() {
             <StatCard
               icon="restaurant-outline"
               value={meals.length}
-              label="Meals"
+              label="All meals"
               iconColor={colors.primary}
-              iconBackground={ui.softBlue}
+              iconBackground={palette.blueSoft}
               colors={colors}
             />
 
@@ -672,8 +737,8 @@ export default function ProfileScreen() {
               icon="heart"
               value={favourites.length}
               label="Favourites"
-              iconColor="#f43f5e"
-              iconBackground={ui.softPink}
+              iconColor="#e11d48"
+              iconBackground={palette.pinkSoft}
               colors={colors}
             />
 
@@ -682,79 +747,78 @@ export default function ProfileScreen() {
               value={myMeals.length}
               label="My recipes"
               iconColor="#10b981"
-              iconBackground={ui.softGreen}
+              iconBackground={palette.greenSoft}
               colors={colors}
             />
           </View>
 
           {/* Profile completion */}
 
-          <SectionHeading
-            icon="checkmark-circle-outline"
-            title="Profile progress"
-            subtitle="Complete your profile details"
+          <SectionHeader
+            title="Profile completion"
+            subtitle="Complete your basic account details"
             colors={colors}
           />
 
           <View
             style={[
-              styles.progressCard,
+              styles.completionCard,
               {
                 backgroundColor: colors.surface,
-                borderColor: colors.border,
                 ...shadow(1),
               },
             ]}
           >
-            <View style={styles.progressTop}>
-              <View style={styles.progressInformation}>
-                <View
+            <View style={styles.completionHeader}>
+              <View
+                style={[
+                  styles.completionIcon,
+                  {
+                    backgroundColor:
+                      palette.orangeSoft,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={24}
+                  color="#f59e0b"
+                />
+              </View>
+
+              <View style={styles.completionText}>
+                <Text
                   style={[
-                    styles.progressIcon,
+                    styles.completionTitle,
+                    { color: colors.text },
+                  ]}
+                >
+                  Complete your profile
+                </Text>
+
+                <Text
+                  style={[
+                    styles.completionSubtitle,
                     {
-                      backgroundColor:
-                        ui.softOrange,
+                      color:
+                        colors.textMuted,
                     },
                   ]}
                 >
-                  <Ionicons
-                    name="trophy-outline"
-                    size={22}
-                    color="#f59e0b"
-                  />
-                </View>
-
-                <View style={styles.progressText}>
-                  <Text
-                    style={[
-                      styles.progressTitle,
-                      { color: colors.text },
-                    ]}
-                  >
-                    Profile completion
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.progressSubtitle,
-                      {
-                        color:
-                          colors.textMuted,
-                      },
-                    ]}
-                  >
-                    Add your name, bio and photo
-                  </Text>
-                </View>
+                  Add your name, bio and profile
+                  photo
+                </Text>
               </View>
 
               <Text
                 style={[
-                  styles.progressPercentage,
-                  { color: colors.primary },
+                  styles.completionValue,
+                  {
+                    color: colors.primary,
+                  },
                 ]}
               >
-                {completion}%
+                {profileCompletion}%
               </Text>
             </View>
 
@@ -763,7 +827,7 @@ export default function ProfileScreen() {
                 styles.progressTrack,
                 {
                   backgroundColor:
-                    ui.progressTrack,
+                    palette.progressTrack,
                 },
               ]}
             >
@@ -771,154 +835,172 @@ export default function ProfileScreen() {
                 style={[
                   styles.progressFill,
                   {
-                    width: `${completion}%`,
+                    width: `${profileCompletion}%`,
                     backgroundColor:
                       colors.primary,
                   },
                 ]}
               />
             </View>
-          </View>
 
-          {/* Preferences */}
-
-          <SectionHeading
-            icon="options-outline"
-            title="Preferences"
-            subtitle="Customize your app"
-            colors={colors}
-          />
-
-          <View
-            style={[
-              styles.settingsCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                ...shadow(1),
-              },
-            ]}
-          >
-            <SettingRow
-              icon={
-                mode === "dark"
-                  ? "moon"
-                  : "sunny-outline"
-              }
-              title="Dark mode"
-              subtitle={
-                mode === "dark"
-                  ? "Dark appearance enabled"
-                  : "Light appearance enabled"
-              }
-              iconColor={
-                mode === "dark"
-                  ? "#818cf8"
-                  : "#f59e0b"
-              }
-              iconBackground={
-                mode === "dark"
-                  ? ui.softBlue
-                  : ui.softOrange
-              }
-              colors={colors}
-            >
-              <Switch
-                value={mode === "dark"}
-                onValueChange={toggle}
-                trackColor={{
-                  false: colors.border,
-                  true: colors.primary,
-                }}
-                thumbColor="#ffffff"
-                ios_backgroundColor={
-                  colors.border
+            <View style={styles.checklist}>
+              <ChecklistItem
+                title="Display name"
+                completed={Boolean(
+                  currentProfile.name.trim()
+                )}
+                colors={colors}
+                completedBackground={
+                  palette.greenSoft
                 }
               />
-            </SettingRow>
+
+              <ChecklistItem
+                title="Profile bio"
+                completed={Boolean(
+                  currentProfile.bio.trim()
+                )}
+                colors={colors}
+                completedBackground={
+                  palette.greenSoft
+                }
+              />
+
+              <ChecklistItem
+                title="Profile photo"
+                completed={Boolean(
+                  currentProfile.avatar.trim()
+                )}
+                colors={colors}
+                completedBackground={
+                  palette.greenSoft
+                }
+              />
+            </View>
           </View>
 
-          {/* About */}
+          {/* Collection insights */}
 
-          <SectionHeading
-            icon="information-circle-outline"
-            title="Application"
-            subtitle="App information"
+          <SectionHeader
+            title="Collection insights"
+            subtitle="A quick summary of your recipe habits"
             colors={colors}
           />
 
           <View
             style={[
-              styles.settingsCard,
+              styles.insightsCard,
               {
                 backgroundColor: colors.surface,
-                borderColor: colors.border,
                 ...shadow(1),
               },
             ]}
           >
-            <SettingRow
-              icon="restaurant-outline"
-              title="Meal Collection"
-              subtitle="Save and organize your meals"
-              iconColor={colors.primary}
-              iconBackground={ui.softBlue}
+            <InsightRow
+              icon="heart-outline"
+              title="Favourite rate"
+              description="Recipes saved as favourites"
+              value={`${favouritePercentage}%`}
+              iconColor="#e11d48"
+              iconBackground={palette.pinkSoft}
+              valueBackground={palette.pinkSoft}
+              valueColor="#e11d48"
               colors={colors}
-            >
-              <View
-                style={[
-                  styles.versionBadge,
-                  {
-                    backgroundColor:
-                      ui.softBlue,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.versionText,
-                    { color: colors.primary },
-                  ]}
-                >
-                  v1.0
-                </Text>
-              </View>
-            </SettingRow>
-
-            <View
-              style={[
-                styles.divider,
-                {
-                  backgroundColor:
-                    colors.border,
-                },
-              ]}
             />
 
-            <SettingRow
-              icon="code-slash-outline"
-              title="Built with Expo"
-              subtitle="React Native application"
+            <InsightRow
+              icon="create-outline"
+              title="Recipes created"
+              description="Recipes added by you"
+              value={String(myMeals.length)}
               iconColor="#10b981"
-              iconBackground={ui.softGreen}
+              iconBackground={palette.greenSoft}
+              valueBackground={palette.greenSoft}
+              valueColor="#10b981"
               colors={colors}
-            >
-              <View
-                style={[
-                  styles.heartBadge,
-                  {
-                    backgroundColor:
-                      ui.softPink,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="heart"
-                  size={16}
-                  color="#f43f5e"
-                />
-              </View>
-            </SettingRow>
+            />
+
+            <InsightRow
+              icon="albums-outline"
+              title="Collection size"
+              description="Total recipes available"
+              value={String(meals.length)}
+              iconColor={colors.primary}
+              iconBackground={palette.blueSoft}
+              valueBackground={palette.blueSoft}
+              valueColor={colors.primary}
+              colors={colors}
+            />
+
+            <InsightRow
+              icon="person-circle-outline"
+              title="Profile status"
+              description="Overall profile completion"
+              value={`${profileCompletion}%`}
+              iconColor="#8b5cf6"
+              iconBackground={palette.purpleSoft}
+              valueBackground={palette.purpleSoft}
+              valueColor="#8b5cf6"
+              colors={colors}
+            />
+          </View>
+
+          {/* Achievements */}
+
+          <SectionHeader
+            title="Achievements"
+            subtitle="Milestones from your collection"
+            colors={colors}
+          />
+
+          <View style={styles.achievementsGrid}>
+            <AchievementCard
+              icon="restaurant-outline"
+              title="Meal explorer"
+              description="Build your first collection"
+              unlocked={meals.length > 0}
+              backgroundColor={palette.blueSoft}
+              iconColor={colors.primary}
+              colors={colors}
+              completedColor={palette.completed}
+              lockedColor={palette.locked}
+            />
+
+            <AchievementCard
+              icon="heart-outline"
+              title="First favourite"
+              description="Save a recipe you love"
+              unlocked={favourites.length > 0}
+              backgroundColor={palette.pinkSoft}
+              iconColor="#e11d48"
+              colors={colors}
+              completedColor={palette.completed}
+              lockedColor={palette.locked}
+            />
+
+            <AchievementCard
+              icon="create-outline"
+              title="Recipe creator"
+              description="Create your first recipe"
+              unlocked={myMeals.length > 0}
+              backgroundColor={palette.greenSoft}
+              iconColor="#10b981"
+              colors={colors}
+              completedColor={palette.completed}
+              lockedColor={palette.locked}
+            />
+
+            <AchievementCard
+              icon="ribbon-outline"
+              title="Complete profile"
+              description="Finish all profile details"
+              unlocked={profileCompletion === 100}
+              backgroundColor={palette.orangeSoft}
+              iconColor="#f59e0b"
+              colors={colors}
+              completedColor={palette.completed}
+              lockedColor={palette.locked}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -932,9 +1014,9 @@ function ProfileField({
   value,
   placeholder,
   onChangeText,
+  colors,
   multiline = false,
   maxLength,
-  colors,
 }) {
   return (
     <View style={styles.fieldGroup}>
@@ -995,55 +1077,30 @@ function ProfileField({
   );
 }
 
-function SectionHeading({
-  icon,
+function SectionHeader({
   title,
   subtitle,
   colors,
-  compact = false,
 }) {
   return (
-    <View
-      style={[
-        styles.sectionHeading,
-        compact &&
-          styles.compactSectionHeading,
-      ]}
-    >
-      <View
+    <View style={styles.sectionHeader}>
+      <Text
         style={[
-          styles.sectionIcon,
-          {
-            backgroundColor: colors.primary,
-          },
+          styles.sectionTitle,
+          { color: colors.text },
         ]}
       >
-        <Ionicons
-          name={icon}
-          size={17}
-          color="#ffffff"
-        />
-      </View>
+        {title}
+      </Text>
 
-      <View style={styles.sectionText}>
-        <Text
-          style={[
-            styles.sectionTitle,
-            { color: colors.text },
-          ]}
-        >
-          {title}
-        </Text>
-
-        <Text
-          style={[
-            styles.sectionSubtitle,
-            { color: colors.textMuted },
-          ]}
-        >
-          {subtitle}
-        </Text>
-      </View>
+      <Text
+        style={[
+          styles.sectionSubtitle,
+          { color: colors.textMuted },
+        ]}
+      >
+        {subtitle}
+      </Text>
     </View>
   );
 }
@@ -1062,7 +1119,6 @@ function StatCard({
         styles.statCard,
         {
           backgroundColor: colors.surface,
-          borderColor: colors.border,
           ...shadow(1),
         },
       ]}
@@ -1104,56 +1160,211 @@ function StatCard({
   );
 }
 
-function SettingRow({
-  icon,
+function ChecklistItem({
   title,
-  subtitle,
-  iconColor,
-  iconBackground,
+  completed,
   colors,
-  children,
+  completedBackground,
 }) {
   return (
-    <View style={styles.settingRow}>
-      <View style={styles.settingInformation}>
+    <View style={styles.checklistItem}>
+      <View
+        style={[
+          styles.checkIcon,
+          {
+            backgroundColor: completed
+              ? completedBackground
+              : colors.bg,
+          },
+        ]}
+      >
+        <Ionicons
+          name={
+            completed
+              ? "checkmark"
+              : "ellipse-outline"
+          }
+          size={16}
+          color={
+            completed
+              ? "#10b981"
+              : colors.textFaint
+          }
+        />
+      </View>
+
+      <Text
+        style={[
+          styles.checklistText,
+          {
+            color: completed
+              ? colors.text
+              : colors.textMuted,
+          },
+        ]}
+      >
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function InsightRow({
+  icon,
+  title,
+  description,
+  value,
+  iconColor,
+  iconBackground,
+  valueBackground,
+  valueColor,
+  colors,
+}) {
+  return (
+    <View style={styles.insightRow}>
+      <View
+        style={[
+          styles.insightIcon,
+          { backgroundColor: iconBackground },
+        ]}
+      >
+        <Ionicons
+          name={icon}
+          size={21}
+          color={iconColor}
+        />
+      </View>
+
+      <View style={styles.insightText}>
+        <Text
+          style={[
+            styles.insightTitle,
+            { color: colors.text },
+          ]}
+        >
+          {title}
+        </Text>
+
+        <Text
+          style={[
+            styles.insightDescription,
+            { color: colors.textMuted },
+          ]}
+        >
+          {description}
+        </Text>
+      </View>
+
+      <View
+        style={[
+          styles.insightValueBox,
+          { backgroundColor: valueBackground },
+        ]}
+      >
+        <Text
+          style={[
+            styles.insightValue,
+            { color: valueColor },
+          ]}
+        >
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function AchievementCard({
+  icon,
+  title,
+  description,
+  unlocked,
+  backgroundColor,
+  iconColor,
+  colors,
+  completedColor,
+  lockedColor,
+}) {
+  return (
+    <View
+      style={[
+        styles.achievementCard,
+        {
+          backgroundColor: colors.surface,
+          ...shadow(1),
+        },
+      ]}
+    >
+      <View style={styles.achievementTop}>
         <View
           style={[
-            styles.settingIcon,
-            {
-              backgroundColor:
-                iconBackground,
-            },
+            styles.achievementIcon,
+            { backgroundColor },
           ]}
         >
           <Ionicons
             name={icon}
-            size={21}
+            size={23}
             color={iconColor}
           />
         </View>
 
-        <View style={styles.settingText}>
-          <Text
-            style={[
-              styles.settingTitle,
-              { color: colors.text },
-            ]}
-          >
-            {title}
-          </Text>
-
-          <Text
-            style={[
-              styles.settingSubtitle,
-              { color: colors.textMuted },
-            ]}
-          >
-            {subtitle}
-          </Text>
+        <View
+          style={[
+            styles.achievementStatus,
+            {
+              backgroundColor: unlocked
+                ? "rgba(16,185,129,0.14)"
+                : colors.bg,
+            },
+          ]}
+        >
+          <Ionicons
+            name={
+              unlocked
+                ? "checkmark-circle"
+                : "lock-closed-outline"
+            }
+            size={17}
+            color={
+              unlocked
+                ? completedColor
+                : lockedColor
+            }
+          />
         </View>
       </View>
 
-      {children}
+      <Text
+        style={[
+          styles.achievementTitle,
+          { color: colors.text },
+        ]}
+      >
+        {title}
+      </Text>
+
+      <Text
+        style={[
+          styles.achievementDescription,
+          { color: colors.textMuted },
+        ]}
+      >
+        {description}
+      </Text>
+
+      <Text
+        style={[
+          styles.achievementLabel,
+          {
+            color: unlocked
+              ? completedColor
+              : lockedColor,
+          },
+        ]}
+      >
+        {unlocked ? "Unlocked" : "Locked"}
+      </Text>
     </View>
   );
 }
@@ -1186,11 +1397,10 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    minHeight: 72,
+    minHeight: 78,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth:
-      StyleSheet.hairlineWidth,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1198,7 +1408,7 @@ const styles = StyleSheet.create({
 
   headerText: {
     flex: 1,
-    paddingRight: spacing.sm,
+    paddingRight: spacing.md,
   },
 
   headerTitle: {
@@ -1208,148 +1418,80 @@ const styles = StyleSheet.create({
   },
 
   headerSubtitle: {
-    marginTop: 2,
+    marginTop: 4,
     fontSize: 12,
   },
 
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-
-  editButton: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    flexDirection: "row",
+  themeButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-  },
-
-  editButtonText: {
-    fontSize: fontSize.sm,
-    fontWeight: "700",
-  },
-
-  cancelButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  saveButton: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-  },
-
-  saveButtonText: {
-    color: "#ffffff",
-    fontSize: fontSize.sm,
-    fontWeight: "800",
-  },
-
-  pressed: {
-    opacity: 0.78,
-    transform: [{ scale: 0.97 }],
   },
 
   scrollContent: {
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
 
-  heroCard: {
+  profileCard: {
+    marginHorizontal: spacing.md,
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+
+  profileCover: {
+    height: 92,
     position: "relative",
     overflow: "hidden",
-    marginHorizontal: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-    borderRadius: 30,
-    alignItems: "center",
   },
 
-  heroCircleLarge: {
-    position: "absolute",
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    top: -125,
-    right: -70,
-    opacity: 0.76,
-  },
-
-  heroCircleSmall: {
+  coverCircleLarge: {
     position: "absolute",
     width: 150,
     height: 150,
     borderRadius: 75,
-    left: -70,
-    bottom: -75,
+    right: -45,
+    top: -80,
   },
 
-  heroBadges: {
-    width: "100%",
-    marginBottom: spacing.md,
-    flexDirection: "row",
+  coverCircleSmall: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    left: -35,
+    bottom: -65,
+  },
+
+  profileContent: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
     alignItems: "center",
-    justifyContent: "space-between",
   },
 
-  heroBadge: {
-    minHeight: 30,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-
-  heroBadgeText: {
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-  activeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#34d399",
-  },
-
-  avatarButton: {
+  avatarPressable: {
     position: "relative",
+    marginTop: -54,
   },
 
   avatarPressed: {
     transform: [{ scale: 0.97 }],
   },
 
-  avatarBorder: {
-    width: 122,
-    height: 122,
-    borderRadius: 61,
+  avatarOuter: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
     padding: 5,
-    backgroundColor:
-      "rgba(255,255,255,0.96)",
     alignItems: "center",
     justifyContent: "center",
   },
 
   avatar: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
+    width: 106,
+    height: 106,
+    borderRadius: 53,
   },
 
   avatarFallback: {
@@ -1359,17 +1501,17 @@ const styles = StyleSheet.create({
 
   avatarInitials: {
     color: "#ffffff",
-    fontSize: 38,
+    fontSize: 36,
     fontWeight: "800",
   },
 
   cameraButton: {
     position: "absolute",
-    right: 0,
-    bottom: 3,
-    width: 37,
-    height: 37,
-    borderRadius: 19,
+    right: 1,
+    bottom: 2,
+    width: 35,
+    height: 35,
+    borderRadius: 18,
     borderWidth: 3,
     borderColor: "#ffffff",
     alignItems: "center",
@@ -1378,47 +1520,61 @@ const styles = StyleSheet.create({
 
   profileName: {
     maxWidth: "90%",
-    marginTop: spacing.md,
-    color: "#ffffff",
-    fontSize: 27,
+    marginTop: spacing.sm,
+    fontSize: 23,
     fontWeight: "800",
-    letterSpacing: -0.6,
     textAlign: "center",
   },
 
   profileBio: {
-    maxWidth: 300,
+    maxWidth: 320,
     marginTop: spacing.xs,
-    color: "rgba(255,255,255,0.76)",
     fontSize: fontSize.sm,
-    lineHeight: 20,
+    lineHeight: 21,
     textAlign: "center",
   },
 
-  choosePhotoButton: {
-    minHeight: 41,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
+  profileActions: {
+    width: "100%",
+    marginTop: spacing.lg,
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+
+  editProfileButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
   },
 
-  choosePhotoText: {
+  editProfileText: {
     color: "#ffffff",
+    fontSize: fontSize.sm,
+    fontWeight: "800",
+  },
+
+  changePhotoButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+
+  changePhotoText: {
     fontSize: fontSize.sm,
     fontWeight: "700",
   },
 
-  editCard: {
-    marginHorizontal: spacing.md,
+  editForm: {
+    width: "100%",
     marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: 24,
-    borderWidth:
-      StyleSheet.hairlineWidth,
     gap: spacing.md,
   },
 
@@ -1435,7 +1591,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
@@ -1459,7 +1615,7 @@ const styles = StyleSheet.create({
   },
 
   multilineInput: {
-    minHeight: 88,
+    minHeight: 86,
     paddingTop: 0,
   },
 
@@ -1469,15 +1625,63 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
 
-  imageActions: {
+  photoActions: {
     flexDirection: "row",
     gap: spacing.sm,
   },
 
-  selectImageButton: {
+  selectPhotoButton: {
     flex: 1,
-    minHeight: 46,
-    paddingHorizontal: spacing.sm,
+    minHeight: 44,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+
+  selectPhotoText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  removePhotoButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+
+  removePhotoText: {
+    color: "#ef4444",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  formActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+
+  cancelButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cancelButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: "700",
+  },
+
+  saveButton: {
+    flex: 1.5,
+    minHeight: 48,
     borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
@@ -1485,61 +1689,26 @@ const styles = StyleSheet.create({
     gap: 7,
   },
 
-  selectImageText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  removeImageButton: {
-    minHeight: 46,
-    paddingHorizontal: spacing.md,
-    borderRadius: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-
-  removeImageText: {
-    color: "#ef4444",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  sectionHeading: {
-    marginHorizontal: spacing.md,
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-
-  compactSectionHeading: {
-    marginHorizontal: 0,
-    marginTop: 0,
-    marginBottom: spacing.xs,
-  },
-
-  sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  sectionText: {
-    flex: 1,
-  },
-
-  sectionTitle: {
-    fontSize: fontSize.md,
+  saveButtonText: {
+    color: "#ffffff",
+    fontSize: fontSize.sm,
     fontWeight: "800",
   },
 
+  sectionHeader: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+  },
+
+  sectionTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+
   sectionSubtitle: {
-    marginTop: 2,
+    marginTop: 3,
     fontSize: 12,
   },
 
@@ -1551,82 +1720,70 @@ const styles = StyleSheet.create({
 
   statCard: {
     flex: 1,
-    minHeight: 132,
-    paddingVertical: spacing.md,
+    minHeight: 118,
     paddingHorizontal: spacing.xs,
-    borderWidth:
-      StyleSheet.hairlineWidth,
-    borderRadius: 21,
+    paddingVertical: spacing.md,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
 
   statIcon: {
-    width: 43,
-    height: 43,
+    width: 41,
+    height: 41,
     marginBottom: spacing.sm,
-    borderRadius: 14,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
   },
 
   statValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "800",
-    letterSpacing: -0.5,
   },
 
   statLabel: {
     marginTop: 3,
-    fontSize: 11,
+    fontSize: 10,
     textAlign: "center",
   },
 
-  progressCard: {
+  completionCard: {
     marginHorizontal: spacing.md,
     padding: spacing.md,
     borderRadius: 22,
-    borderWidth:
-      StyleSheet.hairlineWidth,
   },
 
-  progressTop: {
+  completionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
 
-  progressInformation: {
-    flex: 1,
-    paddingRight: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-
-  progressIcon: {
-    width: 45,
-    height: 45,
+  completionIcon: {
+    width: 46,
+    height: 46,
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  progressText: {
+  completionText: {
     flex: 1,
+    paddingHorizontal: spacing.sm,
   },
 
-  progressTitle: {
+  completionTitle: {
     fontSize: fontSize.md,
     fontWeight: "800",
   },
 
-  progressSubtitle: {
+  completionSubtitle: {
     marginTop: 3,
     fontSize: 12,
+    lineHeight: 17,
   },
 
-  progressPercentage: {
+  completionValue: {
     fontSize: 20,
     fontWeight: "800",
   },
@@ -1643,76 +1800,137 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
 
-  settingsCard: {
-    marginHorizontal: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: 22,
-    borderWidth:
-      StyleSheet.hairlineWidth,
-    overflow: "hidden",
+  checklist: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
 
-  settingRow: {
-    minHeight: 78,
+  checklistItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  checkIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  checklistText: {
+    marginLeft: spacing.sm,
+    fontSize: fontSize.sm,
+    fontWeight: "600",
+  },
+
+  insightsCard: {
+    marginHorizontal: spacing.md,
+    padding: spacing.sm,
+    borderRadius: 22,
+  },
+
+  insightRow: {
+    minHeight: 72,
+    paddingHorizontal: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  insightIcon: {
+    width: 43,
+    height: 43,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  insightText: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+  },
+
+  insightTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: "700",
+  },
+
+  insightDescription: {
+    marginTop: 3,
+    fontSize: 11,
+  },
+
+  insightValueBox: {
+    minWidth: 51,
+    minHeight: 34,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  insightValue: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  achievementsGrid: {
+    marginHorizontal: spacing.md,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+
+  achievementCard: {
+    width: "48%",
+    minHeight: 176,
+    padding: spacing.md,
+    borderRadius: 21,
+  },
+
+  achievementTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
-  settingInformation: {
-    flex: 1,
-    paddingRight: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-
-  settingIcon: {
-    width: 44,
-    height: 44,
+  achievementIcon: {
+    width: 45,
+    height: 45,
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  settingText: {
-    flex: 1,
-  },
-
-  settingTitle: {
-    fontSize: fontSize.md,
-    fontWeight: "700",
-  },
-
-  settingSubtitle: {
-    marginTop: 3,
-    fontSize: 12,
-  },
-
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 56,
-  },
-
-  versionBadge: {
-    minWidth: 52,
-    minHeight: 31,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
+  achievementStatus: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  versionText: {
-    fontSize: 12,
+  achievementTitle: {
+    marginTop: spacing.md,
+    fontSize: fontSize.sm,
     fontWeight: "800",
   },
 
-  heartBadge: {
-    width: 35,
-    height: 35,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+  achievementDescription: {
+    minHeight: 34,
+    marginTop: 5,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+
+  achievementLabel: {
+    marginTop: spacing.sm,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  pressed: {
+    opacity: 0.76,
+    transform: [{ scale: 0.97 }],
   },
 });
