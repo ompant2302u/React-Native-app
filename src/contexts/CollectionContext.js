@@ -1,11 +1,4 @@
 // src/contexts/CollectionContext.js
-//
-// Single source of truth for all meals.
-// - toggleFavourite: flips favourite flag and saves to AsyncStorage immediately
-// - addMeal: prepends a new meal with a unique id
-// - removeMeal: removes by id
-// - updateMeal: partial update by id
-// - favourites: memoised list of meals where favourite === true
 
 import {
   createContext,
@@ -15,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SEED_ITEMS from "../data/seed";
 
@@ -22,75 +16,270 @@ const STORAGE_KEY = "@meal_collection_v2";
 
 const CollectionContext = createContext(null);
 
+function cloneSeedItems() {
+  return Array.isArray(SEED_ITEMS)
+    ? SEED_ITEMS.map((meal) => ({
+        ...meal,
+        favourite: Boolean(meal.favourite),
+      }))
+    : [];
+}
+
 export function CollectionProvider({ children }) {
-  const [meals, setMeals] = useState(SEED_ITEMS);
+  const [meals, setMeals] = useState(cloneSeedItems);
   const [loaded, setLoaded] = useState(false);
 
-  // ── Load from AsyncStorage on first mount ─────────────────────────────
+  /*
+   * Load meals from AsyncStorage.
+   * An empty saved array is respected, so deleted meals
+   * do not return after restarting the application.
+   */
   useEffect(() => {
-    (async () => {
+    let active = true;
+
+    async function loadMeals() {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMeals(parsed);
+        const savedValue =
+          await AsyncStorage.getItem(STORAGE_KEY);
+
+        if (!active) {
+          return;
+        }
+
+        if (savedValue !== null) {
+          const parsedValue = JSON.parse(savedValue);
+
+          if (Array.isArray(parsedValue)) {
+            setMeals(parsedValue);
           }
         }
-      } catch (e) {
-        console.warn("CollectionContext: load error", e);
+      } catch (error) {
+        console.warn(
+          "CollectionContext load error:",
+          error
+        );
       } finally {
-        setLoaded(true);
+        if (active) {
+          setLoaded(true);
+        }
       }
-    })();
+    }
+
+    loadMeals();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // ── Persist to AsyncStorage whenever meals change (after first load) ──
+  /*
+   * Save meals after initial storage loading finishes.
+   */
   useEffect(() => {
-    if (!loaded) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(meals)).catch((e) =>
-      console.warn("CollectionContext: save error", e)
-    );
+    if (!loaded) {
+      return;
+    }
+
+    async function saveMeals() {
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(meals)
+        );
+      } catch (error) {
+        console.warn(
+          "CollectionContext save error:",
+          error
+        );
+      }
+    }
+
+    saveMeals();
   }, [meals, loaded]);
 
-  // ── Actions ───────────────────────────────────────────────────────────
-
-  const toggleFavourite = useCallback((id) => {
-    setMeals((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, favourite: !m.favourite } : m))
-    );
-  }, []);
-
-  const addMeal = useCallback((mealData) => {
+  /*
+   * Add a new recipe.
+   */
+  const addMeal = useCallback((mealData = {}) => {
     const newMeal = {
-      id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      source: "mine",
-      favourite: false,
       ...mealData,
+      id: createMealId(),
+      source: mealData.source || "mine",
+      favourite: Boolean(mealData.favourite),
     };
-    setMeals((prev) => [newMeal, ...prev]);
+
+    setMeals((currentMeals) => [
+      newMeal,
+      ...currentMeals,
+    ]);
+
     return newMeal.id;
   }, []);
 
-  const removeMeal = useCallback((id) => {
-    setMeals((prev) => prev.filter((m) => m.id !== id));
-  }, []);
+  /*
+   * Update only the meal with the matching ID.
+   *
+   * Usage:
+   * updateMeal(mealId, {
+   *   title: "Updated title"
+   * });
+   */
+  const updateMeal = useCallback(
+    (id, updates = {}) => {
+      if (id === undefined || id === null) {
+        console.warn(
+          "updateMeal requires a meal ID."
+        );
+        return;
+      }
 
-  const updateMeal = useCallback((id, updates) => {
-    setMeals((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+      if (
+        !updates ||
+        typeof updates !== "object" ||
+        Array.isArray(updates)
+      ) {
+        console.warn(
+          "updateMeal requires an updates object."
+        );
+        return;
+      }
+
+      setMeals((currentMeals) =>
+        currentMeals.map((meal) => {
+          if (!idsMatch(meal.id, id)) {
+            return meal;
+          }
+
+          return {
+            ...meal,
+            ...updates,
+
+            // Prevent accidental ID changes.
+            id: meal.id,
+          };
+        })
+      );
+    },
+    []
+  );
+
+  /*
+   * Delete only the meal with the matching ID.
+   */
+  const removeMeal = useCallback((id) => {
+    if (id === undefined || id === null) {
+      console.warn(
+        "removeMeal requires a meal ID."
+      );
+      return;
+    }
+
+    setMeals((currentMeals) =>
+      currentMeals.filter(
+        (meal) => !idsMatch(meal.id, id)
+      )
     );
   }, []);
 
-  // Memoised so FavouritesScreen doesn't rerender on unrelated meal changes
+  /*
+   * Alternative name supported by other screens.
+   */
+  const deleteMeal = useCallback(
+    (id) => {
+      removeMeal(id);
+    },
+    [removeMeal]
+  );
+
+  /*
+   * Toggle favourite for one meal.
+   */
+  const toggleFavourite = useCallback((id) => {
+    setMeals((currentMeals) =>
+      currentMeals.map((meal) =>
+        idsMatch(meal.id, id)
+          ? {
+              ...meal,
+              favourite: !Boolean(
+                meal.favourite
+              ),
+            }
+          : meal
+      )
+    );
+  }, []);
+
+  /*
+   * Return one meal by ID.
+   */
+  const getMealById = useCallback(
+    (id) =>
+      meals.find((meal) =>
+        idsMatch(meal.id, id)
+      ) || null,
+    [meals]
+  );
+
+  /*
+   * Delete all recipes.
+   */
+  const clearMeals = useCallback(() => {
+    setMeals([]);
+  }, []);
+
+  /*
+   * Restore original seed recipes.
+   */
+  const resetMeals = useCallback(() => {
+    setMeals(cloneSeedItems());
+  }, []);
+
   const favourites = useMemo(
-    () => meals.filter((m) => m.favourite === true),
+    () =>
+      meals.filter(
+        (meal) => meal.favourite === true
+      ),
+    [meals]
+  );
+
+  const myMeals = useMemo(
+    () =>
+      meals.filter(
+        (meal) => meal.source === "mine"
+      ),
     [meals]
   );
 
   const value = useMemo(
-    () => ({ meals, favourites, loaded, toggleFavourite, addMeal, removeMeal, updateMeal }),
-    [meals, favourites, loaded, toggleFavourite, addMeal, removeMeal, updateMeal]
+    () => ({
+      meals,
+      favourites,
+      myMeals,
+      loaded,
+
+      addMeal,
+      updateMeal,
+      removeMeal,
+      deleteMeal,
+      toggleFavourite,
+      getMealById,
+      clearMeals,
+      resetMeals,
+    }),
+    [
+      meals,
+      favourites,
+      myMeals,
+      loaded,
+      addMeal,
+      updateMeal,
+      removeMeal,
+      deleteMeal,
+      toggleFavourite,
+      getMealById,
+      clearMeals,
+      resetMeals,
+    ]
   );
 
   return (
@@ -101,7 +290,23 @@ export function CollectionProvider({ children }) {
 }
 
 export function useCollection() {
-  const ctx = useContext(CollectionContext);
-  if (!ctx) throw new Error("useCollection must be used within CollectionProvider");
-  return ctx;
+  const context = useContext(CollectionContext);
+
+  if (!context) {
+    throw new Error(
+      "useCollection must be used inside CollectionProvider."
+    );
+  }
+
+  return context;
+}
+
+function createMealId() {
+  return `meal-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 9)}`;
+}
+
+function idsMatch(firstId, secondId) {
+  return String(firstId) === String(secondId);
 }
